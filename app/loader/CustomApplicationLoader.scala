@@ -1,6 +1,7 @@
 package loader
 
 
+import play.api.libs.ws.ning.NingWSComponents
 import router.Routes
 import play.api.{BuiltInComponentsFromContext, Application, ApplicationLoader}
 import play.api.ApplicationLoader.Context
@@ -12,7 +13,7 @@ class CustomApplicationLoader  extends ApplicationLoader {
   }
 }
 
-class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) {
+class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) with NingWSComponents {
   private def getConfigurationValue(field: String): String = {
     context.initialConfiguration.getString(field) match {
       case None => {
@@ -25,8 +26,10 @@ class ApplicationComponents(context: Context) extends BuiltInComponentsFromConte
   }
 //  private val filter: CORSFilter = new CORSFilter(CORSConfig.fromConfiguration(configuration))
 //override lazy val httpFilters = new CorsFilters(filter).filters
-  lazy val weatherService = new WeatherService
-  lazy val applicationController = new controllers.Application(weatherService)(actorSystem.dispatcher)
+
+  lazy val weatherHost = getConfigurationValue("weather.host")
+  lazy val weatherService = new WeatherService(wsClient, weatherHost)(actorSystem.dispatcher)
+  lazy val applicationController = new controllers.WeatherController(weatherService)(actorSystem.dispatcher)
   lazy val assets = new controllers.Assets(httpErrorHandler)
   override lazy val router = new Routes(httpErrorHandler, applicationController, assets)
 }
